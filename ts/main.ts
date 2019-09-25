@@ -41,16 +41,37 @@ export async function run() {
       return
     }
 
+    let supportedActions = ['opened', 'edited', 'labeled', 'unlabeled']
+
     const act = ctx.payload.action;
-    if (act != 'opened' && act != 'edited') {
-      console.log("issue neither 'opened' nor 'edited', skipping");
+    if (supportedActions.indexOf(act || "undefined_action") < 0) {
+      console.log("issue neither 'opened', 'edited', 'labeled' nor 'unlabeled'; skipping");
       return;
     }
 
+/*
+ if 'triage' added -> execute
+   if error reproducible
+     - remove 'triage'
+     - add 'reproducible'
+     - post/edit comment with ref and bug log
+   if execution successful and error not reproducible
+     - remove 'triage'
+     - add 'fixed?'
+   if execution fails but expected error is not produced
+     - post/edit comment with warning
+*/
+
     core.startGroup('Print issue labels');
-    console.log(ctx.payload.issue.labels);
+    let labels = ctx.payload.issue.labels;
+    console.log(labels);
+    if (labels.find(x => x.name === 'triage')) {
+      runner(ctx.payload.issue);
+      return
+    }
     core.endGroup()
 
+    console.log('Execute runner, just in case...');
     runner(ctx.payload.issue);
 
     //const repoToken: string = core.getInput('token', {required: true});
